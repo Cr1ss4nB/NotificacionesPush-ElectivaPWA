@@ -8,7 +8,7 @@ const vapid = require('./vapid.json');
 const webpush = require('web-push');
 
 webpush.setVapidDetails(
-    'mailto:fernando.herrera85@gmail.com',
+    'mailto:carlos.arenas@uptc.edu.co',
     vapid.publicKey,
     vapid.privateKey
   );
@@ -26,11 +26,12 @@ module.exports.getKey = () => {
 
 
 module.exports.addSubscription = ( suscripcion ) => {
-
+    console.log('Antes enviar suscripción ');
     suscripciones.push( suscripcion );
 
-    
+    console.log('antes modificar subs-db.json');
     fs.writeFileSync(`${ __dirname }/subs-db.json`, JSON.stringify(suscripciones) );
+    console.log('Nueva suscripción agregada');
 };
 
 
@@ -61,6 +62,7 @@ module.exports.sendPush = ( post ) => {
     });
 
     Promise.all( notificacionesEnviadas ).then( () => {
+
 
         suscripciones = suscripciones.filter( subs => !subs.borrar );
 

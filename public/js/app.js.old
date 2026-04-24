@@ -1,8 +1,8 @@
+
 var url = window.location.href;
 var swLocation = '/sw.js';
 
 var swReg;
-window.enviarNotificacion = enviarNotificacion;
 
 if ( navigator.serviceWorker ) {
 
@@ -248,46 +248,36 @@ function verificaSuscripcion( activadas ) {
 
 
 
-async function enviarNotificacion() {
+function enviarNotificacion() {
 
-    if (!swReg) {
-        console.log('No hay registro de Service Worker');
-        return;
-    }
-     if (!('Notification' in window)) {
-        console.log('Este navegador no soporta notificaciones');
-        return;
-    }
+    const notificationOpts = {
+        body: 'Este es el cuerpo de la notificación',
+        icon: 'img/icons/icon-72x72.png'
+    };
 
-    if (Notification.permission !== 'granted') {
-        console.log('No hay permiso para mostrar notificaciones');
-        return;
-    }
-    try {
-        console.log('Mostrando notificación de prueba...');
-        await swReg.showNotification('Notificación de prueba', {
-            body: 'Las notificaciones funcionan correctamente en Chrome',
-            icon: 'img/icons/icon-192x192.png',
-            badge: 'img/favicon.ico',
-            data: {
-                url: '/index.html'
-            },
-            requireInteraction: true
-        });
-    } catch (err) {
-        console.log('Error mostrando notificación de prueba:', err);
+
+    //const n = new Notification('Hola Mundo', notificationOpts);
+
+    //n.onclick = () => {
+    //    console.log('Click');
+    //};
+    // En lugar de new Notification, usa el registro del SW
+    if ( swReg ) {
+        swReg.showNotification('Hola Mundo', notificationOpts);
+    } else {
+        // Fallback por si el SW no está listo
+        new Notification('Hola Mundo', notificationOpts);
     }
 
 }
 
-async function solicitarPermisoNotificaciones() {
+async function notificarme() {
   if (!('Notification' in window)) {
     console.log('Este navegador no soporta notificaciones');
     return false;
   }
 
   if (Notification.permission === 'granted') {
-    console.log('El permiso para las notificaciones se ha concedido!');
     return true;
   }
 
@@ -300,6 +290,38 @@ async function solicitarPermisoNotificaciones() {
   return permiso === 'granted';
 }
 
+/*function notificarme() {
+
+     if ( !window.Notification ) {
+        console.log('Este navegador no soporta notificaciones');
+        return;
+    }
+
+    if ( Notification.permission === 'granted' ) {
+        
+        //new Notification('Esta es mi notificación personalizada!');
+        enviarNotificacion();
+
+    } else if ( Notification.permission !== 'denied' || Notification.permission === 'default' )  {
+
+        Notification.requestPermission( function( permission ) {
+
+            console.log( permission );
+
+            if ( permission === 'granted' ) {
+                // new Notification('Hola Mundo! - pregunta');
+                enviarNotificacion();
+            }
+
+        });
+
+    }
+
+
+ 
+}*/
+
+//notificarme();
 
 
 // Get Key
