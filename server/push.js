@@ -8,8 +8,7 @@ const vapid = require('./vapid.json');
 const webpush = require('web-push');
 
 webpush.setVapidDetails(
-    // Identidad institucional usada por Web Push.
-    'mailto:edwin.becerra03@uptc.edu.co',
+    'mailto:cristian.basto@uptc.edu.co',
     vapid.publicKey,
     vapid.privateKey
 );
@@ -44,7 +43,7 @@ module.exports.sendPush = (post) => {
 
 
         const pushProm = webpush.sendNotification(suscripcion, JSON.stringify(post))
-            .then(console.log('Notificacion enviada '))
+            .then(() => console.log('Notificacion enviada '))
             .catch(err => {
 
                 console.log('Notificación falló');
