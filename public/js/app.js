@@ -17,7 +17,7 @@ if ( navigator.serviceWorker ) {
         navigator.serviceWorker.register( swLocation ).then( function(reg){
 
             swReg = reg;
-            swReg.pushManager.getSubscription().then( verificaSuscripcion );
+            swReg.pushManager.getSubscription().then( actualizarUIEstadoNotificaciones );
 
         });
 
@@ -43,6 +43,7 @@ var modal       = $('#modal');
 var modalAvatar = $('#modal-avatar');
 var avatarBtns  = $('.seleccion-avatar');
 var txtMensaje  = $('#txtMensaje');
+var permisoEstado = $('#permiso-estado');
 
 var btnActivadas    = $('.btn-noti-activadas');
 var btnDesactivadas = $('.btn-noti-desactivadas');
@@ -205,8 +206,6 @@ getMensajes();
 function isOnline() {
 
     if ( navigator.onLine ) {
-        // tenemos conexión
-        // console.log('online');
         $.mdtoast('Online', {
             interaction: true,
             interactionTimeout: 1000,
@@ -229,21 +228,77 @@ window.addEventListener('online', isOnline );
 window.addEventListener('offline', isOnline );
 
 isOnline();
+inicializarEstadoPermiso();
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        refrescarEstadoNotificaciones();
+    }
+});
 
 
 // Notificaciones
-function verificaSuscripcion( activadas ) {
+// Sincroniza el texto y color del indicador con el permiso actual.
+function actualizarEstadoPermiso(estado) {
+    var permiso = estado;
 
-    if ( activadas ) {
-        
-        btnActivadas.removeClass('oculto');
-        btnDesactivadas.addClass('oculto');
-
-    } else {
-        btnActivadas.addClass('oculto');
-        btnDesactivadas.removeClass('oculto');
+    if (permiso === 'prompt') {
+        permiso = 'default';
     }
 
+    permisoEstado
+        .removeClass('permiso-granted permiso-denied permiso-default')
+        .addClass('permiso-' + permiso)
+        .text(permiso.charAt(0).toUpperCase() + permiso.slice(1));
+}
+
+function inicializarEstadoPermiso() {
+    if (!('Notification' in window)) {
+        actualizarEstadoPermiso('default');
+        return;
+    }
+
+    // Estado inicial al cargar la app.
+    actualizarEstadoPermiso(Notification.permission);
+
+    if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'notifications' }).then(function(status) {
+            actualizarEstadoPermiso(status.state);
+            status.onchange = function() {
+                actualizarEstadoPermiso(status.state);
+                refrescarEstadoNotificaciones();
+            };
+        }).catch(function() {
+            actualizarEstadoPermiso(Notification.permission);
+        });
+    }
+}
+
+function actualizarUIEstadoNotificaciones(suscripcion) {
+    if (!('Notification' in window)) {
+        btnActivadas.addClass('oculto');
+        btnDesactivadas.addClass('oculto');
+        return;
+    }
+
+    actualizarEstadoPermiso(Notification.permission);
+
+    if (Notification.permission !== 'granted' || !suscripcion) {
+        btnActivadas.addClass('oculto');
+        btnDesactivadas.removeClass('oculto');
+        return;
+    }
+
+    btnActivadas.removeClass('oculto');
+    btnDesactivadas.addClass('oculto');
+}
+
+function refrescarEstadoNotificaciones() {
+    if (!swReg || !swReg.pushManager) {
+        actualizarUIEstadoNotificaciones(null);
+        return;
+    }
+
+    swReg.pushManager.getSubscription().then(actualizarUIEstadoNotificaciones);
 }
 
 
@@ -288,15 +343,18 @@ async function solicitarPermisoNotificaciones() {
 
   if (Notification.permission === 'granted') {
     console.log('El permiso para las notificaciones se ha concedido!');
+        actualizarEstadoPermiso('granted');
     return true;
   }
 
   if (Notification.permission === 'denied') {
     console.log('El usuario bloqueó las notificaciones');
+        actualizarEstadoPermiso('denied');
     return false;
   }
 
   const permiso = await Notification.requestPermission();
+    actualizarEstadoPermiso(permiso);
   return permiso === 'granted';
 }
 
@@ -304,11 +362,6 @@ async function solicitarPermisoNotificaciones() {
 
 // Get Key
 function getPublicKey() {
-
-    // fetch('api/key')
-    //     .then( res => res.text())
-    //     .then( console.log );
-
     return fetch('api/key')
         .then( res => res.arrayBuffer())
         // returnar arreglo, pero como un Uint8array
@@ -316,39 +369,6 @@ function getPublicKey() {
 
 
 }
-
-// getPublicKey().then( console.log );
-/* btnDesactivadas.on( 'click', function() {
-
-    if ( !swReg ) return console.log('No hay registro de SW');
-
-    getPublicKey().then( function( key ) {
-
-        swReg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: key
-        })
-        .then( res => res.toJSON() )
-        .then( suscripcion => {
-
-            // console.log(suscripcion);
-            fetch('api/subscribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify( suscripcion )
-            })
-            .then( verificaSuscripcion )
-            .catch( cancelarSuscripcion );
-
-
-        });
-
-
-    });
-
-
-});
- */
 
 btnDesactivadas.on('click', async function() {
 
@@ -378,7 +398,7 @@ btnDesactivadas.on('click', async function() {
             body: JSON.stringify(subscription)
         });
 
-        verificaSuscripcion(subscription);
+        actualizarUIEstadoNotificaciones(subscription);
 
     } catch (err) {
         console.error('Error al activar notificaciones push:', err);
@@ -386,12 +406,59 @@ btnDesactivadas.on('click', async function() {
 
 });
 
+// Helper manual para probar payloads personalizados desde consola.
+async function enviarPushPersonalizada() {
+    const payload = {
+        titulo: 'Alerta Stark Industries',
+        cuerpo: 'Sistema en linea. Verifique el tablero de control.',
+        usuario: 'ironman',
+        url: '/index.html',
+        icon: 'img/avatars/ironman.jpg',
+        badge: 'img/favicon.ico',
+        image: 'https://giphy.com/gifs/robert-downey-jr-marvel-iron-man-lXo8uSnIkaB9e',
+        vibrate: [120, 80, 140, 80, 180],
+        tag: 'stark-alert',
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        dir: 'ltr',
+        lang: 'es-CO',
+        actions: [
+            {
+                action: 'ver-panel',
+                title: 'Ver Panel',
+                icon: 'img/avatars/ironman.jpg'
+            },
+            {
+                action: 'ignorar',
+                title: 'Ignorar',
+                icon: 'img/avatars/hulk.jpg'
+            }
+        ]
+    };
+
+    return fetch('api/push', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+}
+
+window.enviarPushPersonalizada = enviarPushPersonalizada;
+
 
 function cancelarSuscripcion() {
 
     swReg.pushManager.getSubscription().then( subs => {
 
-        subs.unsubscribe().then( () =>  verificaSuscripcion(false) );
+        if (!subs) {
+            actualizarUIEstadoNotificaciones(null);
+            return;
+        }
+
+        subs.unsubscribe().then( () =>  actualizarUIEstadoNotificaciones(null) );
 
     });
 

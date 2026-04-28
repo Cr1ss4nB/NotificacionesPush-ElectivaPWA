@@ -8,7 +8,8 @@ const vapid = require('./vapid.json');
 const webpush = require('web-push');
 
 webpush.setVapidDetails(
-    'mailto:cristian.basto@uptc.edu.co',
+    // Identidad institucional usada por Web Push.
+    'mailto:edwin.becerra03@uptc.edu.co',
     vapid.publicKey,
     vapid.privateKey
 );
@@ -60,7 +61,7 @@ module.exports.sendPush = (post) => {
 
     Promise.all(notificacionesEnviadas).then(() => {
 
-
+        // Limpieza de subscripciones expiradas.
         suscripciones = suscripciones.filter(subs => !subs.borrar);
 
         fs.writeFileSync(`${__dirname}/subs-db.json`, JSON.stringify(suscripciones));

@@ -71,10 +71,24 @@ router.get('/key', (req, res) => {
 // ES ALGO que se controla del lado del server
 router.post('/push', (req, res) => {
 
+  // Se propagan propiedades personalizadas para que el SW las use.
   const post = {
     titulo: req.body.titulo,
     cuerpo: req.body.cuerpo,
-    usuario: req.body.usuario
+    usuario: req.body.usuario,
+    url: req.body.url,
+    icon: req.body.icon,
+    badge: req.body.badge,
+    image: req.body.image,
+    vibrate: req.body.vibrate,
+    tag: req.body.tag,
+    renotify: req.body.renotify,
+    requireInteraction: req.body.requireInteraction,
+    silent: req.body.silent,
+    dir: req.body.dir,
+    lang: req.body.lang,
+    actions: req.body.actions,
+    timestamp: req.body.timestamp
   };
 
 

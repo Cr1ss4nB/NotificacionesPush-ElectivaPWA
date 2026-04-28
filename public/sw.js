@@ -29,7 +29,6 @@ const APP_SHELL = [
 const APP_SHELL_INMUTABLE = [
     'https://fonts.googleapis.com/css?family=Quicksand:300,400',
     'https://fonts.googleapis.com/css?family=Lato:400,300',
-    //'https://use.fontawesome.com/releases/v5.3.1/css/all.css',
     'https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.css',
     'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js',
     'https://cdn.jsdelivr.net/npm/pouchdb@7.0.0/dist/pouchdb.min.js'
@@ -84,8 +83,6 @@ self.addEventListener( 'fetch', e => {
     let respuesta;
 
     if ( e.request.url.includes('/api') ) {
-
-        // return respuesta????
         respuesta = manejoApiMensajes( DYNAMIC_CACHE, e.request );
 
     } else {
@@ -134,37 +131,45 @@ self.addEventListener('sync', e => {
 // Escuchar PUSH
 self.addEventListener('push', e => {
 
-    // console.log(e);
+    let data = {};
 
-    const data = JSON.parse( e.data.text() );
+    if (e.data) {
+        try {
+            data = JSON.parse(e.data.text());
+        } catch (err) {
+            data = {};
+        }
+    }
 
-    // console.log(data);
-
-
-    const title = data.titulo;
+    // Permite sobreescribir propiedades del payload con valores de ejemplo.
+    const title = data.titulo || 'Nueva notificacion';
     const options = {
-        body: data.cuerpo,
-        // icon: 'img/icons/icon-72x72.png',
-        icon: `img/avatars/${ data.usuario }.jpg`,
-        badge: 'img/favicon.ico',
-        image: 'https://vignette.wikia.nocookie.net/marvelcinematicuniverse/images/5/5b/Torre_de_los_Avengers.png/revision/latest?cb=20150626220613&path-prefix=es',
-        vibrate: [125,75,125,275,200,275,125,75,125,275,200,600,200,600],
-        openUrl: '/',
+        body: data.cuerpo || 'Tienes una nueva notificacion.',
+        icon: data.icon || `img/avatars/${ data.usuario || 'spiderman' }.jpg`,
+        badge: data.badge || 'img/favicon.ico',
+        image: data.image || 'https://vignette.wikia.nocookie.net/marvelcinematicuniverse/images/5/5b/Torre_de_los_Avengers.png/revision/latest?cb=20150626220613&path-prefix=es',
+        vibrate: data.vibrate || [125, 75, 125, 275, 200, 275, 125, 75, 125, 275, 200, 600, 200, 600],
+        tag: data.tag || 'chat-push',
+        renotify: data.renotify === true,
+        requireInteraction: data.requireInteraction !== false,
+        silent: data.silent === true,
+        dir: data.dir || 'ltr',
+        lang: data.lang || 'es-CO',
+        timestamp: data.timestamp || Date.now(),
         data: {
-            // url: 'https://google.com',
-            url: '/',
-            id: data.usuario
+            url: data.url || '/',
+            usuario: data.usuario || 'spiderman'
         },
-        actions: [
+        actions: Array.isArray(data.actions) && data.actions.length ? data.actions : [
             {
                 action: 'thor-action',
                 title: 'Thor',
-                icon: 'img/avatar/thor.jpg'
+                icon: 'img/avatars/thor.jpg'
             },
             {
                 action: 'ironman-action',
                 title: 'Ironman',
-                icon: 'img/avatar/ironman.jpg'
+                icon: 'img/avatars/ironman.jpg'
             }
         ]
     };
@@ -181,41 +186,6 @@ self.addEventListener('notificationclose', e => {
     console.log('Notificación cerrada', e);
 });
 
-
-/* self.addEventListener('notificationclick', e => {
-
-
-    const notificacion = e.notification;
-    const accion = e.action;
-
-
-    console.log({ notificacion, accion });
-    // console.log(notificacion);
-    // console.log(accion);
-    
-
-    const respuesta = clients.matchAll()
-    .then( clientes => {
-
-        let cliente = clientes.find( c => {
-            return c.visibilityState === 'visible';
-        });
-
-        if ( cliente !== undefined ) {
-            cliente.navigate( notificacion.data.url );
-            cliente.focus();
-        } else {
-            clients.openWindow( notificacion.data.url );
-        }
-
-        return notificacion.close();
-
-    });
-
-    e.waitUntil( respuesta );
-
-
-}); */
 
 self.addEventListener('notificationclick', e => {
     const notificacion = e.notification;
